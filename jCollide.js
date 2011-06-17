@@ -2,8 +2,8 @@
 takes a jquery element that its attached to
 */
 
-var jcPenalty = { rest : 10,
-		  damp : 4};
+var jcPenalty = { rest : 20,
+		  damp : 10};
 
 function jcVec2(x,y){
     this.x = x;
@@ -93,7 +93,7 @@ function jc_checkY(b1Pos, b1Size, b2Pos, b2Size){
 	    //push toward the minimum distance
 	    var r1 = b1Pos.top - b2Pos.top;
 	    var r2 = (b1Pos.top + b1Size.top) - (b2Pos.top + b2Size.top);
-	    if(abs(r1) <= abs(r2)){
+	    if(Math.abs(r1) <= Math.abs(r2)){
 		return r1;
 	    }
 	    return r2;
