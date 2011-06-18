@@ -1,8 +1,8 @@
 $(document).ready( function (){
-    for(var i = 0; i < 4; ++i){
+    for(var i = 0; i < 2; ++i){
 	$('<div><p>Hello</p></div>').css('border-style', 'solid').appendTo("body");
     }
     var elems = $.map($('div'), function(e){return new jcBody(e);});
     jcLoop(elems,
-		    jcGravity(new jcVec2(0, 10)));
+		    jcGravity(new jcVec2(0, 100)));
 });

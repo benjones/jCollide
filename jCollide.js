@@ -1,23 +1,37 @@
-/*
-takes a jquery element that its attached to
-*/
 
-var jcPenalty = { rest : 20,
-		  damp : 10};
+/*rest = restitution coefficient, quadratic in distance
+  damp = damping coefficient
+pad = "buffer" around objects for collision detection,
+compensating for use of penalty forces
+ */
+var jcGlobals = { rest : 30,
+		  damp : 50,
+		  pad : 10};
 
 function jcVec2(x,y){
     this.x = x;
     this.y = y;
 }
 
+/*
+takes a jquery element that its attached to
+*/
 function jcBody(elem) {
-    //elem.css('position' , 'absolute');
+    
     this.elem = $(elem);
+    console.log(this.elem.offset());
+    //this.elem.css('position' , 'relative');   
     this.acceleration = new jcVec2(0,0);
     this.velocity = new jcVec2(0,0);
-    this.mass = 1;
+    this.mass = 2;
     this.force = new jcVec2(0,0);
-    this.position = this.elem.offset();
+    var v = this.elem.offset();
+    console.log(v);
+    console.log(v.top);
+    this.position = {top : v.top, left : v.left};
+    console.log(this.position);
+    console.log(this.position.top);
+    console.log(this.elem.offset());
 
     this.applyForce = function(f){
 	this.force.x += f.x;
@@ -38,7 +52,10 @@ function jcBody(elem) {
 
 	this.position.left += this.velocity.x *dt;
 	this.position.top += this.velocity.y*dt;
-	this.elem.offset(this.position);
+
+    }
+    this.reposition = function(){
+      this.elem.offset(this.position);
     }
     
 }
@@ -58,7 +75,7 @@ function jcCollide(b1, b2){
 	    //b2 is completely inside the x coordinate
 	    var cy = jc_checkY(b1Pos, b1Size, b2Pos, b2Size);
 	    if(cy != null){
-		var f = new jcVec2(0, cy*jcPenalty.rest);
+	      var f = new jcVec2(0, cy*Math.abs(cy)*jcGlobals.rest);
 		var g = new jcVec2(-f.x, -f.y);
 		b1.applyForce(g);
 		b2.applyForce(f);
@@ -67,7 +84,7 @@ function jcCollide(b1, b2){
 	    //b2's right side sticks out
 	    var cy = jc_checkY(b1Pos, b1Size, b2Pos, b2Size);
 	    if(cy != null){
-		var f = new jcVec2(0, cy*jcPenalty.rest);
+	      var f = new jcVec2(0, cy*Math.abs(cy)*jcGlobals.rest);
 		var g = new jcVec2(-f.x, -f.y);
 		b1.applyForce(g);
 		b2.applyForce(f);
@@ -78,7 +95,7 @@ function jcCollide(b1, b2){
 	//the right endpoint of b2 penetrates in X, left is outside
 	var cy = jc_checkY(b1Pos, b1Size, b2Pos, b2Size);
 	if(cy != null){
-		var f = new jcVec2(0, cy*jcPenalty.rest);
+	  var f = new jcVec2(0, cy*Math.abs(cy)*jcGlobals.rest);
 		var g = new jcVec2(-f.x, -f.y);
 		b1.applyForce(g);
 		b2.applyForce(f);
@@ -87,7 +104,7 @@ function jcCollide(b1, b2){
 }
 //returns penetration distance or 0 if none
 function jc_checkY(b1Pos, b1Size, b2Pos, b2Size){
-    console.log('ycheck');
+
     if((b2Pos.top >= b1Pos.top) && (b2Pos.top <= (b1Pos.top + b1Size.top))){
 	if((b2Pos.top + b2Size.top) >= b1Pos.top && (b2Pos.top + b2Size.top) <= (b1Pos.top + b1Size.top)){
 	    //push toward the minimum distance
@@ -114,50 +131,61 @@ function jcBound(b, wSize){
     var bPos = b.elem.offset();
     var bSize = { left: b.elem.width(),
 		  top: b.elem.height()};
-    if(bPos.left < 0){
-	b.applyForce(new jcVec2(-bPos.x*jcPenalty.rest - b.velocity.x*jcPenalty.damp, 0));
+    if(bPos.left < jcGlobals.pad){
+      var mag = -bPos.x + jcGlobals.pad;
+      b.applyForce(new jcVec2(mag*Math.abs(mag)*jcGlobals.rest - b.velocity.x*jcGlobals.damp, 0));
     }
-    if(bPos.top < 0){
-	b.applyForce(new jcVec2(0, -bPos.top*jcPenalty.rest - b.velocity.y*jcPenalty.damp));
+    if(bPos.top < jcGlobals.pad){
+      var mag = -bPos.top + jcGlobals.pad;
+      b.applyForce(new jcVec2(0,mag*Math.abs(mag)*jcGlobals.rest - b.velocity.y*jcGlobals.damp));
     }
-    if(bPos.left + bSize.left > wSize.left){
-	b.applyForce(new jcVec2((wSize.left - 
-				 bPos.left - 
-				 bSize.left)*jcPenalty.rest - b.velocity.x*jcPenalty.damp,
+    if(bPos.left + bSize.left > wSize.left - jcGlobals.pad){
+      var mag = (wSize.left - jcGlobals.pad - 
+		 bPos.left - 
+		 bSize.left);
+      b.applyForce(new jcVec2(mag*Math.abs(mag)*jcGlobals.rest - b.velocity.x*jcGlobals.damp,
 				0));
     }
-    if(bPos.top + bSize.top > wSize.top){
-	b.applyForce(new jcVec2(0, (wSize.top -
-				    bPos.top - 
-				    bSize.top)*
-				jcPenalty.rest - b.velocity.y*jcPenalty.damp));
+    if(bPos.top + bSize.top > wSize.top - jcGlobals.pad){
+      var mag =  (wSize.top - jcGlobals.pad -
+		  bPos.top - 
+		  bSize.top);
+      b.applyForce(new jcVec2(0,mag*Math.abs(mag)*jcGlobals.rest - 
+			      b.velocity.y*jcGlobals.damp));
     }
 }
 
 function jcLoop(bodies, callback){
-    var dt = 1.0/30;
-    var bodies = bodies;
-    var wSize = {left : $(document).width(),
-	     top : $(document).height()};
- 
-    var timer = setInterval(function () {
-	var len = bodies.length;
+  var framerate = 60;
+  var physFramerate = 600;
+  var dt = 1.0/physFramerate;
+  var bodies = bodies;
+  var wSize = {left : $(document).width(),
+	       top : $(document).height()};
+  
+  var timer = setInterval(function () {
+      var len = bodies.length;
+      for(var iter = 0; iter < physFramerate/framerate; ++iter){
 	for(var i = 0; i < len; ++i){
-	    bodies[i].clearForces();
-	    jcBound(bodies[i], wSize);
+	  bodies[i].clearForces();
+	  jcBound(bodies[i], wSize);
 	}
 	//do collisions
 	for(var i = 0; i < len; ++i){
-	    for(var j = 0; j < i; ++j){
-		jcCollide(bodies[i], bodies[j]);
-	    }
+	  for(var j = 0; j < i; ++j){
+	    jcCollide(bodies[i], bodies[j]);
+	  }
 	}
 	callback(bodies);
 	
 	for(var i = 0; i < len; ++i){
-	    bodies[i].update(dt);
+	  bodies[i].update(dt);
 	}
-    }, dt);
+      }
+      for(var i = 0; i < len; ++i){
+	bodies[i].reposition();
+	  }
+    }, 1000/framerate);
 }
 
 function jcGravity(g){
