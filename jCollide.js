@@ -1,12 +1,8 @@
 
-/*rest = restitution coefficient, quadratic in distance
-  damp = damping coefficient
-pad = "buffer" around objects for collision detection,
-compensating for use of penalty forces
+/*damp = what % of speed to should objects have after collision
  */
-var jcGlobals = { rest : 30,
-		  damp : 50,
-		  pad : 10};
+var jcGlobals = { damp : .5};
+
 
 function jcVec2(x,y){
     this.x = x;
@@ -62,10 +58,10 @@ function jcBody(elem) {
 
 //collide bodies and add penalty forces
 function jcCollide(b1, b2){
-    b1Pos = b1.elem.offset();
+    b1Pos = b1.position;
     b1Size = { left : b1.elem.width(),
 	       top : b1.elem.height()};
-    b2Pos = b2.elem.offset();
+    b2Pos = b2.position;
     b2Size = { left : b2.elem.width(),
 	       top : b2.elem.height()};
 
@@ -75,7 +71,10 @@ function jcCollide(b1, b2){
 	    //b2 is completely inside the x coordinate
 	    var cy = jc_checkY(b1Pos, b1Size, b2Pos, b2Size);
 	    if(cy != null){
-	      var f = new jcVec2(0, cy*Math.abs(cy)*jcGlobals.rest);
+		var dv = {x : b2.velocity.x - b1.velocity.x,
+			  y : b2.velocity.y - b1.velocity.y};
+		var f = new jcVec2(0, cy*jcGlobals.rest -
+				  dv.y*jcGlobals.damp);
 		var g = new jcVec2(-f.x, -f.y);
 		b1.applyForce(g);
 		b2.applyForce(f);
@@ -84,7 +83,10 @@ function jcCollide(b1, b2){
 	    //b2's right side sticks out
 	    var cy = jc_checkY(b1Pos, b1Size, b2Pos, b2Size);
 	    if(cy != null){
-	      var f = new jcVec2(0, cy*Math.abs(cy)*jcGlobals.rest);
+		var dv = {x : b2.velocity.x - b1.velocity.x,
+			  y : b2.velocity.y - b1.velocity.y};
+		var f = new jcVec2(0, cy*jcGlobals.rest - 
+				   dv.y*jcGlobals.damp);
 		var g = new jcVec2(-f.x, -f.y);
 		b1.applyForce(g);
 		b2.applyForce(f);
@@ -95,69 +97,78 @@ function jcCollide(b1, b2){
 	//the right endpoint of b2 penetrates in X, left is outside
 	var cy = jc_checkY(b1Pos, b1Size, b2Pos, b2Size);
 	if(cy != null){
-	  var f = new jcVec2(0, cy*Math.abs(cy)*jcGlobals.rest);
-		var g = new jcVec2(-f.x, -f.y);
-		b1.applyForce(g);
-		b2.applyForce(f);
+	    var dv = {x : b2.velocity.x - b1.velocity.x,
+		      y : b2.velocity.y - b1.velocity.y};
+	    var f = new jcVec2(0, cy*jcGlobals.rest -
+			      dv.y*jcGLobals.damp);
+	    var g = new jcVec2(-f.x, -f.y);
+	    b1.applyForce(g);
+	    b2.applyForce(f);
 	}
     }
 }
 //returns penetration distance or 0 if none
 function jc_checkY(b1Pos, b1Size, b2Pos, b2Size){
 
-    if((b2Pos.top >= b1Pos.top) && (b2Pos.top <= (b1Pos.top + b1Size.top))){
-	if((b2Pos.top + b2Size.top) >= b1Pos.top && (b2Pos.top + b2Size.top) <= (b1Pos.top + b1Size.top)){
+    if((b2Pos.top >= b1Pos.top - jcGlobals.pad) && (b2Pos.top <= (b1Pos.top + b1Size.top + jcGlobals.pad))){
+	if((b2Pos.top + b2Size.top) >= b1Pos.top - jcGlobals.pad  && (b2Pos.top + b2Size.top) <= (b1Pos.top + b1Size.top + jcGlobals.pad)){
 	    //push toward the minimum distance
-	    var r1 = b1Pos.top - b2Pos.top;
-	    var r2 = (b1Pos.top + b1Size.top) - (b2Pos.top + b2Size.top);
+	    var r1 = b1Pos.top - b2Pos.top - jcGlobals.pad;
+	    var r2 = (b1Pos.top + b1Size.top + jcGlobals.pad) - (b2Pos.top + b2Size.top);
 	    if(Math.abs(r1) <= Math.abs(r2)){
 		return r1;
 	    }
 	    return r2;
 	    
 	} else {
-	    //push toward bottom
-	    return (b1Pos.top + b1Size.top) - b2Pos.top;
+	    //push down
+	    return (b1Pos.top + b1Size.top + jcGlobals.pad) - b2Pos.top;
 	}
     }
-    else if((b2Pos.top + b2Size.top) >= b1Pos.top && (b2Pos.top + b2Size.top) <= (b1Pos.top + b1Size.top)){
+    else if((b2Pos.top + b2Size.top) >= b1Pos.top - jcGlobals.pad && (b2Pos.top + b2Size.top) <= (b1Pos.top + b1Size.top + jcGlobals.pad)){
 	//push toward top
-	return b1Pos.top - b2Pos.top;
+	return b1Pos.top - b2Pos.top - jcGlobals.pad;
     }
     return null;
 }
 //apply penalty forces to keep the objects in the window
-function jcBound(b, wSize){
-    var bPos = b.elem.offset();
+function jcBound(b, wSize, dt){
+    var bPos = b.position;
     var bSize = { left: b.elem.width(),
 		  top: b.elem.height()};
-    if(bPos.left < jcGlobals.pad){
-      var mag = -bPos.x + jcGlobals.pad;
-      b.applyForce(new jcVec2(mag*Math.abs(mag)*jcGlobals.rest - b.velocity.x*jcGlobals.damp, 0));
+    if(bPos.left < 0){
+      b.applyForce(new jcVec2(
+	  (-b.velocity.x*(1 + jcGlobals.damp) - bPos.left/(2*dt))*
+	      b.mass/dt
+	  ,0));
     }
-    if(bPos.top < jcGlobals.pad){
-      var mag = -bPos.top + jcGlobals.pad;
-      b.applyForce(new jcVec2(0,mag*Math.abs(mag)*jcGlobals.rest - b.velocity.y*jcGlobals.damp));
+    if(bPos.top < 0){
+      b.applyForce(new jcVec2(0,
+			      (-b.velocity.y*
+			       (1 + jcGlobals.damp) - 
+			       bPos.top/(2*dt))*b.mass/dt
+			     ));
     }
-    if(bPos.left + bSize.left > wSize.left - jcGlobals.pad){
-      var mag = (wSize.left - jcGlobals.pad - 
-		 bPos.left - 
-		 bSize.left);
-      b.applyForce(new jcVec2(mag*Math.abs(mag)*jcGlobals.rest - b.velocity.x*jcGlobals.damp,
-				0));
+    if(bPos.left + bSize.left > wSize.left ){
+	b.applyForce(new jcVec2(
+	    (-b.velocity.x*(1 + jcGlobals.damp) - 
+	     (bPos.left + bSize.left - wSize.left)/(2*dt))*
+		b.mass/dt
+	    ,0));
     }
-    if(bPos.top + bSize.top > wSize.top - jcGlobals.pad){
-      var mag =  (wSize.top - jcGlobals.pad -
-		  bPos.top - 
-		  bSize.top);
-      b.applyForce(new jcVec2(0,mag*Math.abs(mag)*jcGlobals.rest - 
-			      b.velocity.y*jcGlobals.damp));
+    if(bPos.top + bSize.top > wSize.top){
+      b.applyForce(new jcVec2(0,
+			      (-b.velocity.y*
+			       (1 + jcGlobals.damp) -
+			      (bPos.top + bSize.top - 
+			       wSize.top)/(2*dt))*b.mass/dt
+			     ));
     }
 }
 
 function jcLoop(bodies, callback){
   var framerate = 60;
-  var physFramerate = 600;
+  var physFramerate = 480;
   var dt = 1.0/physFramerate;
   var bodies = bodies;
   var wSize = {left : $(document).width(),
@@ -168,7 +179,7 @@ function jcLoop(bodies, callback){
       for(var iter = 0; iter < physFramerate/framerate; ++iter){
 	for(var i = 0; i < len; ++i){
 	  bodies[i].clearForces();
-	  jcBound(bodies[i], wSize);
+	  jcBound(bodies[i], wSize, dt);
 	}
 	//do collisions
 	for(var i = 0; i < len; ++i){
