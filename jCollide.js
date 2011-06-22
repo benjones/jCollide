@@ -58,8 +58,8 @@ function jcBody(elem) {
     
 }
 
-//collide bodies and add penalty forces
-function jcCollide(b1, b2){
+//collide bodies and add impulses
+function jcCollide(b1, b2, dt){
     b1Pos = b1.position;
     b1Size = { left : b1.elem.width(),
 	       top : b1.elem.height()};
@@ -67,72 +67,33 @@ function jcCollide(b1, b2){
     b2Size = { left : b2.elem.width(),
 	       top : b2.elem.height()};
 
-    if((b2Pos.left >= b1Pos.left) && (b2Pos.left <= (b1Pos.left + b1Size.left))){
-	//b2 left side intersects w/ b1.  Might be completely inside, or right side might be outside
-	if((b2Pos.left + b2Size.left) >= b1Pos.left && (b2Pos.left + b2Size.left) <= (b1Pos.left + b1Size.left)){
-	    //b2 is completely inside the x coordinate
-	    var cy = jc_checkY(b1Pos, b1Size, b2Pos, b2Size);
-	    if(cy != null){
-		var dv = {x : b2.velocity.x - b1.velocity.x,
-			  y : b2.velocity.y - b1.velocity.y};
-		var f = new jcVec2(0, cy*jcGlobals.rest -
-				  dv.y*jcGlobals.damp);
-		var g = new jcVec2(-f.x, -f.y);
-		b1.applyForce(g);
-		b2.applyForce(f);
-	    }
-	} else {
-	    //b2's right side sticks out
-	    var cy = jc_checkY(b1Pos, b1Size, b2Pos, b2Size);
-	    if(cy != null){
-		var dv = {x : b2.velocity.x - b1.velocity.x,
-			  y : b2.velocity.y - b1.velocity.y};
-		var f = new jcVec2(0, cy*jcGlobals.rest - 
-				   dv.y*jcGlobals.damp);
-		var g = new jcVec2(-f.x, -f.y);
-		b1.applyForce(g);
-		b2.applyForce(f);
-	    }
+    dx = jCollide1D(b1Pos.left, b1Pos.left + b1Size.left,
+		    b2Pos.left, b2Pos.left + b2Size.left);
+    if(dx != 0){
+	dy = jCollide1D(b1Pos.top, b1Pos.top + b1Size.top,
+			b2Pos.top, b2Pos.top + b2Size.top);
+	if(dy != 0){
+	    //collision
+	    if(Math.abs(dx) < Math.abs(dy)){
+		//correct along x
+		var mag = -(1 + jcGlobals.damp*2)*
+		    (b1.velocity.x - b2.velocity.x)/
+		    ((1.0/b1.mass + 1.0/b2.mass)*dt);
+		b1.applyForce(new jcVec2(mag, 0));
+		b2.applyForce(new jcVec2(-mag, 0));
+	    } else {
+		//correct along y
+	var 	mag = -(1 + jcGlobals.damp*2)*
+		    (b1.velocity.y - b2.velocity.y)/
+		    ((1.0/b1.mass + 1.0/b2.mass)*dt);
+		b1.applyForce(new jcVec2(0, mag));
+		b2.applyForce(new jcVec2(0, -mag));
+	    }	    
 	}
     }
-    else if((b2Pos.left + b2Size.left) >= b1Pos.left && (b2Pos.left + b2Size.left) <= (b1Pos.left + b1Size.left)){
-	//the right endpoint of b2 penetrates in X, left is outside
-	var cy = jc_checkY(b1Pos, b1Size, b2Pos, b2Size);
-	if(cy != null){
-	    var dv = {x : b2.velocity.x - b1.velocity.x,
-		      y : b2.velocity.y - b1.velocity.y};
-	    var f = new jcVec2(0, cy*jcGlobals.rest -
-			      dv.y*jcGLobals.damp);
-	    var g = new jcVec2(-f.x, -f.y);
-	    b1.applyForce(g);
-	    b2.applyForce(f);
-	}
-    }
+    //no collision
 }
-//returns penetration distance or 0 if none
-function jc_checkY(b1Pos, b1Size, b2Pos, b2Size){
 
-    if((b2Pos.top >= b1Pos.top - jcGlobals.pad) && (b2Pos.top <= (b1Pos.top + b1Size.top + jcGlobals.pad))){
-	if((b2Pos.top + b2Size.top) >= b1Pos.top - jcGlobals.pad  && (b2Pos.top + b2Size.top) <= (b1Pos.top + b1Size.top + jcGlobals.pad)){
-	    //push toward the minimum distance
-	    var r1 = b1Pos.top - b2Pos.top - jcGlobals.pad;
-	    var r2 = (b1Pos.top + b1Size.top + jcGlobals.pad) - (b2Pos.top + b2Size.top);
-	    if(Math.abs(r1) <= Math.abs(r2)){
-		return r1;
-	    }
-	    return r2;
-	    
-	} else {
-	    //push down
-	    return (b1Pos.top + b1Size.top + jcGlobals.pad) - b2Pos.top;
-	}
-    }
-    else if((b2Pos.top + b2Size.top) >= b1Pos.top - jcGlobals.pad && (b2Pos.top + b2Size.top) <= (b1Pos.top + b1Size.top + jcGlobals.pad)){
-	//push toward top
-	return b1Pos.top - b2Pos.top - jcGlobals.pad;
-    }
-    return null;
-}
 
 //seg a1 is [a1, a2], seg b = [b1, b2]
 //returns how deep it is, in the direction that b
@@ -229,7 +190,7 @@ function jcLoop(bodies, callback){
 	//do collisions
 	for(var i = 0; i < len; ++i){
 	  for(var j = 0; j < i; ++j){
-	    jcCollide(bodies[i], bodies[j]);
+	    jcCollide(bodies[i], bodies[j], dt);
 	  }
 	}
 	callback(bodies);
