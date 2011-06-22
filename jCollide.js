@@ -3,7 +3,7 @@
   wallFriction = what percentage of tangential speed to have after
 */
 var jcGlobals = { damp : .5,
-		wallFriction : .8};
+		wallFriction : .95};
 
 
 function jcVec2(x,y){
@@ -76,18 +76,18 @@ function jcCollide(b1, b2, dt){
 	    //collision
 	    if(Math.abs(dx) < Math.abs(dy)){
 		//correct along x
-		var mag = -(1 + jcGlobals.damp*2)*
-		    (b1.velocity.x - b2.velocity.x)/
+		var mag = (-(1 + jcGlobals.damp)*
+		    (b2.velocity.x - b1.velocity.x ) + dx/(dt))/
 		    ((1.0/b1.mass + 1.0/b2.mass)*dt);
-		b1.applyForce(new jcVec2(mag, 0));
-		b2.applyForce(new jcVec2(-mag, 0));
+		b1.applyForce(new jcVec2(-mag, 0));
+		b2.applyForce(new jcVec2(mag, 0));
 	    } else {
 		//correct along y
-	var 	mag = -(1 + jcGlobals.damp*2)*
-		    (b1.velocity.y - b2.velocity.y)/
+		var mag = (-(1 + jcGlobals.damp)*
+		    (b2.velocity.y - b1.velocity.y) + dy/(dt))/
 		    ((1.0/b1.mass + 1.0/b2.mass)*dt);
-		b1.applyForce(new jcVec2(0, mag));
-		b2.applyForce(new jcVec2(0, -mag));
+		b1.applyForce(new jcVec2(0, -mag));
+		b2.applyForce(new jcVec2(0, mag));
 	    }	    
 	}
     }
@@ -149,7 +149,7 @@ function jcBound(b, wSize, dt){
 	var mag = (-b.velocity.y*
 		   (1 + jcGlobals.damp) - 
 		   bPos.top/(2*dt))*b.mass/dt;
-	var fric = b.velocity.x*(jcGLobals.wallFriction -1)*
+	var fric = b.velocity.x*(jcGlobals.wallFriction -1)*
 		    b.mass/dt;
 	b.applyForce(new jcVec2(fric,mag ));
     }
