@@ -133,7 +133,45 @@ function jc_checkY(b1Pos, b1Size, b2Pos, b2Size){
     }
     return null;
 }
-//apply penalty forces to keep the objects in the window
+
+//seg a1 is [a1, a2], seg b = [b1, b2]
+//returns how deep it is, in the direction that b
+//should be pushed to get it out
+function jCollide1D(a1, a2, b1, b2){
+    if(a2 <= b1 || a1 >= b2){//AABB or BBAA
+	return 0;// no collision
+    }
+    if(b1 > a1){// b1 is between a1, a2
+	if(a2 <= b2){// A B A B
+	    //push right
+	    return a2 - b1;
+	}
+	else{// A B B A
+	    //push right or left
+	    var overlap = b2 - b1;
+	    //fix sign
+	    if(b1 - a1 > b2 - a2){
+		overlap *= -1;
+	    } 
+	    return overlap;
+	}
+    }
+    //B A ...
+    if(a2 <= b2){ //B A A B
+	//push left or right
+	var overlap = a2 - a1;
+	if(a1 - b1 > a2 - b2){
+	    overlap *= -1;
+	}
+	return overlap;
+    }
+    else { //B A B A
+	return a1 - b2;//push left
+    }
+}
+
+
+//apply impuleses to keep objects in the window
 function jcBound(b, wSize, dt){
     var bPos = b.position;
     var bSize = { left: b.elem.width(),
