@@ -53,7 +53,14 @@ function jcBody(elem) {
 
     }
     this.reposition = function(){
-      this.elem.offset(this.position);
+      curPos = this.elem.offset();
+      if(Math.round(this.position.top) != 
+	 Math.round(curPos.top)
+	 || Math.round(this.position.left) != 
+	 Math.round(curPos.left)) {
+	
+	this.elem.offset(this.position);
+      }
     }
     
 }
@@ -174,7 +181,7 @@ function jcBound(b, wSize, dt){
 
 function jcLoop(bodies, callback){
   var framerate = 60;
-  var physFramerate = 480;
+  var physFramerate = 300;
   var dt = 1.0/physFramerate;
   var bodies = bodies;
   var wSize = {left : $(document).width(),
