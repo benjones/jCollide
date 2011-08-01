@@ -17,19 +17,13 @@ takes a jquery element that its attached to
 function jcBody(elem) {
     
     this.elem = $(elem);
-    console.log(this.elem.offset());
     //this.elem.css('position' , 'relative');   
     this.acceleration = new jcVec2(0,0);
     this.velocity = new jcVec2(0,0);
     this.mass = 2;
     this.force = new jcVec2(0,0);
     var v = this.elem.offset();
-    console.log(v);
-    console.log(v.top);
     this.position = {top : v.top, left : v.left};
-    console.log(this.position);
-    console.log(this.position.top);
-    console.log(this.elem.offset());
 
     this.applyForce = function(f){
 	this.force.x += f.x;
@@ -144,35 +138,40 @@ function jcBound(b, wSize, dt){
     var bPos = b.position;
     var bSize = { left: b.elem.width(),
 		  top: b.elem.height()};
-    if(bPos.left < 0){
+    var parent = b.elem.parent();
+    var pPos = parent.offset();
+    var pSize = {left: parent.width(),
+		 top: parent.height()};
+
+    if(bPos.left < pPos.left){
 	var mag = (-b.velocity.x*(1 + jcGlobals.damp) - 
-		   bPos.left/(2*dt))*
+		   (bPos.left - pPos.left)/(2*dt))*
 	    b.mass/dt;
 	var fric = b.velocity.y*(jcGlobals.wallFriction - 1)*
 		    b.mass/dt;
 	b.applyForce(new jcVec2(mag ,fric));
     }
-    if(bPos.top < 0){
+    if(bPos.top < pPos.top){
 	var mag = (-b.velocity.y*
 		   (1 + jcGlobals.damp) - 
-		   bPos.top/(2*dt))*b.mass/dt;
+		   (bPos.top- pPos.top)/(2*dt))*b.mass/dt;
 	var fric = b.velocity.x*(jcGlobals.wallFriction -1)*
 		    b.mass/dt;
 	b.applyForce(new jcVec2(fric,mag ));
     }
-    if(bPos.left + bSize.left > wSize.left ){
+    if(bPos.left + bSize.left > (pPos.left + pSize.left) ){
 	var mag = (-b.velocity.x*(1 + jcGlobals.damp) - 
-	     (bPos.left + bSize.left - wSize.left)/(2*dt))*
+	     (bPos.left + bSize.left - (pPos.left + pSize.left))/(2*dt))*
 		b.mass/dt;
 	var fric = b.velocity.y*(jcGlobals.wallFriction -1)*
 		    b.mass/dt;
 	b.applyForce(new jcVec2(mag, fric));
     }
-    if(bPos.top + bSize.top > wSize.top){
+    if(bPos.top + bSize.top > (pPos.top + pSize.top)){
 	var mag = (-b.velocity.y*
 		   (1 + jcGlobals.damp) -
 		   (bPos.top + bSize.top - 
-		    wSize.top)/(2*dt))*b.mass/dt;
+		    (pPos.top + pSize.top))/(2*dt))*b.mass/dt;
 	var fric = b.velocity.x*(jcGlobals.wallFriction -1)*
 		    b.mass/dt;
 	b.applyForce(new jcVec2(fric, mag));
