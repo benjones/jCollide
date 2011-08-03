@@ -15,5 +15,6 @@ $(document).ready( function (){
     elems[3].damping = .2;
     elems[3].friction = .2;
     jcLoop(elems, 
-	   jcGravity(new jcVec2(0, 100)));
+	   //jcGravity(new jcVec2(0, 100)));
+	   jcBrownian(300));
 });

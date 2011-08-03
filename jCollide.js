@@ -157,7 +157,7 @@ function jCollide1D(a1, a2, b1, b2){
 
 
 //apply impuleses to keep objects in the window
-function jcBound(b, wSize, dt){
+function jcBound(b, dt){
     var bPos = b.position;
     var bSize = { left: b.elem.width(),
 		  top: b.elem.height()};
@@ -206,15 +206,13 @@ function jcLoop(bodies, callback){
   var physFramerate = 240;
   var dt = 1.0/physFramerate;
   var bodies = bodies;
-  var wSize = {left : $(document).width(),
-	       top : $(document).height()};
   
   var timer = setInterval(function () {
       var len = bodies.length;
       for(var iter = 0; iter < physFramerate/framerate; ++iter){
 	for(var i = 0; i < len; ++i){
 	  bodies[i].clearForces();
-	  jcBound(bodies[i], wSize, dt);
+	  jcBound(bodies[i], dt);
 	}
 	//do collisions
 	for(var i = 0; i < len; ++i){
@@ -234,6 +232,7 @@ function jcLoop(bodies, callback){
     }, 1000/framerate);
 }
 
+//pre-written callback that performs gravity
 function jcGravity(g){
     return function(bodies){
 	var len = bodies.length;
@@ -242,4 +241,36 @@ function jcGravity(g){
 	    b.applyForce(new jcVec2(b.mass*g.x, b.mass*g.y));
 	}
     }
+}
+
+//from protonfish.com.  Hope it works.
+function rnd_bmt() {
+	var x = 0, y = 0, rds, c;
+
+	// Get two random numbers from -1 to 1.
+	// If the radius is zero or greater than 1, throw them out and pick two new ones
+	// Rejection sampling throws away about 20% of the pairs.
+	do {
+	x = Math.random()*2-1;
+	y = Math.random()*2-1;
+	rds = x*x + y*y;
+	}
+	while (rds == 0 || rds > 1)
+
+	// This magic is the Box-Muller Transform
+	c = Math.sqrt(-2*Math.log(rds)/rds);
+
+	// It always creates a pair of numbers. I'll return them in an array. 
+	// This function is quite efficient so don't be afraid to throw one away if you don't need both.
+	return [x*c, y*c];
+}
+
+function jcBrownian(bMag){
+  return function(bodies){
+    var len = bodies.length;
+    for(i = 0; i < len; ++i){
+      rands = rnd_bmt();
+      bodies[i].applyForce(new jcVec2(bMag*rands[0], bMag*rands[1]));
+    }
+  }
 }
