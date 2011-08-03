@@ -2,8 +2,10 @@
 /*damp = what % of speed to should objects have after collision
   wallFriction = what percentage of tangential speed to have after
 */
-var jcGlobals = { damp : .5,
-		wallFriction : .95};
+var jcGlobals = { defaultDamp : 0.45,
+		  defaultFriction : 0.70,
+		  wallDamp : 0.5,
+		  wallFriction : 0.95};
 
 
 function jcVec2(x,y){
@@ -24,6 +26,9 @@ function jcBody(elem) {
     this.force = new jcVec2(0,0);
     var v = this.elem.offset();
     this.position = {top : v.top, left : v.left};
+    this.damping = jcGlobals.defaultDamp;
+    this.friction = jcGlobals.defaultFriction;
+
 
     this.applyForce = function(f){
 	this.force.x += f.x;
@@ -74,21 +79,36 @@ function jcCollide(b1, b2, dt){
 	dy = jCollide1D(b1Pos.top, b1Pos.top + b1Size.top,
 			b2Pos.top, b2Pos.top + b2Size.top);
 	if(dy != 0){
-	    //collision
+	  //collision
+	  var dampCoeff = Math.sqrt(b1.damping * b2.damping);
+	  var fricCoeff = Math.sqrt(b1.friction * b2.friction);
+	  var relV;
+	  var relVTan;
+	  var mag;
+	  var fric;
+	  var massFactor = (1.0/b1.mass + 1.0/b2.mass);
 	    if(Math.abs(dx) < Math.abs(dy)){
 		//correct along x
-		var mag = (-(1 + jcGlobals.damp)*
-		    (b2.velocity.x - b1.velocity.x ) + dx/(dt))/
-		    ((1.0/b1.mass + 1.0/b2.mass)*dt);
-		b1.applyForce(new jcVec2(-mag, 0));
-		b2.applyForce(new jcVec2(mag, 0));
+	      relV = (b2.velocity.x - b1.velocity.x ); 
+	      relVTan = (b2.velocity.y - b1.velocity.y);
+	      mag = (-(1 + dampCoeff)*relV
+		     + dx/(dt))/
+		(massFactor*dt);
+	      
+	      fric = relVTan*(fricCoeff -1)/(massFactor*dt);
+
+	      b1.applyForce(new jcVec2(-mag, -fric));
+	      b2.applyForce(new jcVec2(mag, fric));
 	    } else {
 		//correct along y
-		var mag = (-(1 + jcGlobals.damp)*
-		    (b2.velocity.y - b1.velocity.y) + dy/(dt))/
-		    ((1.0/b1.mass + 1.0/b2.mass)*dt);
-		b1.applyForce(new jcVec2(0, -mag));
-		b2.applyForce(new jcVec2(0, mag));
+	      relV = (b2.velocity.y - b1.velocity.y);
+	      relVTan = (b2.velocity.x - b1.velocity.x);
+		mag = (-(1 + dampCoeff)*relV
+		     + dy/(dt))/
+		    (massFactor*dt);
+		fric = relVTan*(fricCoeff -1)/(massFactor*dt);
+		b1.applyForce(new jcVec2(-fric, -mag));
+		b2.applyForce(new jcVec2(fric, mag));
 	    }	    
 	}
     }
@@ -144,7 +164,7 @@ function jcBound(b, wSize, dt){
 		 top: parent.height()};
 
     if(bPos.left < pPos.left){
-	var mag = (-b.velocity.x*(1 + jcGlobals.damp) - 
+	var mag = (-b.velocity.x*(1 + jcGlobals.wallDamp) - 
 		   (bPos.left - pPos.left)/(2*dt))*
 	    b.mass/dt;
 	var fric = b.velocity.y*(jcGlobals.wallFriction - 1)*
@@ -153,14 +173,14 @@ function jcBound(b, wSize, dt){
     }
     if(bPos.top < pPos.top){
 	var mag = (-b.velocity.y*
-		   (1 + jcGlobals.damp) - 
+		   (1 + jcGlobals.wallDamp) - 
 		   (bPos.top- pPos.top)/(2*dt))*b.mass/dt;
 	var fric = b.velocity.x*(jcGlobals.wallFriction -1)*
 		    b.mass/dt;
 	b.applyForce(new jcVec2(fric,mag ));
     }
     if(bPos.left + bSize.left > (pPos.left + pSize.left) ){
-	var mag = (-b.velocity.x*(1 + jcGlobals.damp) - 
+	var mag = (-b.velocity.x*(1 + jcGlobals.wallDamp) - 
 	     (bPos.left + bSize.left - (pPos.left + pSize.left))/(2*dt))*
 		b.mass/dt;
 	var fric = b.velocity.y*(jcGlobals.wallFriction -1)*
@@ -169,7 +189,7 @@ function jcBound(b, wSize, dt){
     }
     if(bPos.top + bSize.top > (pPos.top + pSize.top)){
 	var mag = (-b.velocity.y*
-		   (1 + jcGlobals.damp) -
+		   (1 + jcGlobals.wallDamp) -
 		   (bPos.top + bSize.top - 
 		    (pPos.top + pSize.top))/(2*dt))*b.mass/dt;
 	var fric = b.velocity.x*(jcGlobals.wallFriction -1)*
@@ -180,7 +200,7 @@ function jcBound(b, wSize, dt){
 
 function jcLoop(bodies, callback){
   var framerate = 60;
-  var physFramerate = 300;
+  var physFramerate = 240;
   var dt = 1.0/physFramerate;
   var bodies = bodies;
   var wSize = {left : $(document).width(),
