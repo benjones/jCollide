@@ -10,6 +10,7 @@ $(document).ready( function (){
     elems[0].velocity.x = 800;
     elems[1].velocity.x = -300;
     elems[2].velocity.x = 400;
+    elems[2].jGroup = 2;
     elems[3].velocity.x = -200;
     elems[3].damping = .2;
     elems[3].friction = .2;

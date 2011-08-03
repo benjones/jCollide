@@ -28,6 +28,7 @@ function jcBody(elem) {
     this.position = {top : v.top, left : v.left};
     this.damping = jcGlobals.defaultDamp;
     this.friction = jcGlobals.defaultFriction;
+    this.jGroup = 1;
 
 
     this.applyForce = function(f){
@@ -66,40 +67,42 @@ function jcBody(elem) {
 
 //collide bodies and add impulses
 function jcCollide(b1, b2, dt){
-    b1Pos = b1.position;
-    b1Size = { left : b1.elem.width(),
-	       top : b1.elem.height()};
-    b2Pos = b2.position;
-    b2Size = { left : b2.elem.width(),
-	       top : b2.elem.height()};
-
-    dx = jCollide1D(b1Pos.left, b1Pos.left + b1Size.left,
-		    b2Pos.left, b2Pos.left + b2Size.left);
-    if(dx != 0){
-	dy = jCollide1D(b1Pos.top, b1Pos.top + b1Size.top,
-			b2Pos.top, b2Pos.top + b2Size.top);
-	if(dy != 0){
-	  //collision
-	  var dampCoeff = Math.sqrt(b1.damping * b2.damping);
-	  var fricCoeff = Math.sqrt(b1.friction * b2.friction);
-	  var relV;
-	  var relVTan;
-	  var mag;
-	  var fric;
-	  var massFactor = (1.0/b1.mass + 1.0/b2.mass);
-	    if(Math.abs(dx) < Math.abs(dy)){
-		//correct along x
-	      relV = (b2.velocity.x - b1.velocity.x ); 
-	      relVTan = (b2.velocity.y - b1.velocity.y);
-	      mag = (-(1 + dampCoeff)*relV
-		     + dx/(dt))/
-		(massFactor*dt);
-	      
-	      fric = relVTan*(fricCoeff -1)/(massFactor*dt);
-
-	      b1.applyForce(new jcVec2(-mag, -fric));
-	      b2.applyForce(new jcVec2(mag, fric));
-	    } else {
+  if(b1.jGroup != b2.jGroup)
+    return;
+  b1Pos = b1.position;
+  b1Size = { left : b1.elem.width(),
+	     top : b1.elem.height()};
+  b2Pos = b2.position;
+  b2Size = { left : b2.elem.width(),
+	     top : b2.elem.height()};
+  
+  dx = jCollide1D(b1Pos.left, b1Pos.left + b1Size.left,
+		  b2Pos.left, b2Pos.left + b2Size.left);
+  if(dx != 0){
+    dy = jCollide1D(b1Pos.top, b1Pos.top + b1Size.top,
+		    b2Pos.top, b2Pos.top + b2Size.top);
+    if(dy != 0){
+      //collision
+      var dampCoeff = Math.sqrt(b1.damping * b2.damping);
+      var fricCoeff = Math.sqrt(b1.friction * b2.friction);
+      var relV;
+      var relVTan;
+      var mag;
+      var fric;
+      var massFactor = (1.0/b1.mass + 1.0/b2.mass);
+      if(Math.abs(dx) < Math.abs(dy)){
+	//correct along x
+	relV = (b2.velocity.x - b1.velocity.x ); 
+	relVTan = (b2.velocity.y - b1.velocity.y);
+	mag = (-(1 + dampCoeff)*relV
+	       + dx/(dt))/
+	  (massFactor*dt);
+	
+	fric = relVTan*(fricCoeff -1)/(massFactor*dt);
+	
+	b1.applyForce(new jcVec2(-mag, -fric));
+	b2.applyForce(new jcVec2(mag, fric));
+      } else {
 		//correct along y
 	      relV = (b2.velocity.y - b1.velocity.y);
 	      relVTan = (b2.velocity.x - b1.velocity.x);
